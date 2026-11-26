@@ -1,0 +1,75 @@
+name: Build DostCare iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-ipa:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Create project.yml
+        run: |
+          cat << 'EOF' > project.yml
+          name: DostCareiOS
+          options:
+            bundleIdPrefix: com.dostcare
+            deploymentTarget:
+              iOS: "15.0"
+          targets:
+            DostCareiOS:
+              type: application
+              platform: iOS
+              sources:
+                - path: DostCareiOS
+              settings:
+                base:
+                  PRODUCT_BUNDLE_IDENTIFIER: com.dostcare.ios
+                  ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+                  CODE_SIGN_STYLE: Manual
+                  DEVELOPMENT_TEAM: ""
+                  CODE_SIGN_IDENTITY: ""
+                  PROVISIONING_PROFILE_SPECIFIER: ""
+                  IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+                  SWIFT_VERSION: "5.9"
+          EOF
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build unsigned app and package IPA
+        run: |
+          set -e
+          xcodebuild \
+            -project DostCareiOS.xcodeproj \
+            -scheme DostCareiOS \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=NO \
+            build
+
+          APP_PATH=$(find build/DerivedData/Build/Products/Release-iphoneos -name "*.app" -maxdepth 1 | head -n 1)
+          echo "Found app at: $APP_PATH"
+          test -n "$APP_PATH"
+
+          mkdir -p build/ipa/Payload
+          cp -R "$APP_PATH" build/ipa/Payload/
+          (cd build/ipa && zip -r -y ../../DostCare.ipa Payload)
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DostCare-iOS-IPA
+          path: DostCare.ipa
+          if-no-files-found: error

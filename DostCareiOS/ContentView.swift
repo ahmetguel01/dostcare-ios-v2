@@ -227,7 +227,6 @@ final class CameraBarcodeController: NSObject, ObservableObject, AVCapturePhotoC
         try? data.write(to: url)
         lastPhotoName = fname
     }
-}
 
 struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession

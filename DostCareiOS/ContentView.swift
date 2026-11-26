@@ -135,9 +135,8 @@ final class CameraBarcodeController: NSObject, ObservableObject, AVCapturePhotoC
             if self.session.canAddOutput(self.photoOutput) {
                 self.session.addOutput(self.photoOutput)
             }
-                if self.session.canAddOutput(self.metadataOutput) {
-    self.session.addOutput(self.metadataOutput)
-}
+            if self.session.canAddOutput(self.metadataOutput) {
+                self.session.addOutput(self.metadataOutput)
                 self.metadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
                 self.metadataOutput.metadataObjectTypes = [.ean13, .ean8, .code128, .qr, .dataMatrix]
             }
@@ -227,9 +226,11 @@ final class CameraBarcodeController: NSObject, ObservableObject, AVCapturePhotoC
         try? data.write(to: url)
         lastPhotoName = fname
     }
+}
 
 struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
+
     func makeUIView(context: Context) -> UIView {
         let v = UIView(frame: .zero)
         let layer = AVCaptureVideoPreviewLayer(session: session)
@@ -238,32 +239,46 @@ struct CameraPreviewView: UIViewRepresentable {
         context.coordinator.previewLayer = layer
         return v
     }
+
     func updateUIView(_ uiView: UIView, context: Context) {
         context.coordinator.previewLayer?.frame = uiView.bounds
     }
+
     func makeCoordinator() -> Coordinator { Coordinator() }
-    final class Coordinator { var previewLayer: AVCaptureVideoPreviewLayer? }
+
+    final class Coordinator {
+        var previewLayer: AVCaptureVideoPreviewLayer?
+    }
 }
 
 struct PhotoPickerView: UIViewControllerRepresentable {
     var onPick: (UIImage, String) -> Void
+
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let p = UIImagePickerController()
         p.sourceType = .photoLibrary
         p.delegate = context.coordinator
         return p
     }
+
     func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
     func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
+
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         let onPick: (UIImage, String) -> Void
-        init(onPick: @escaping (UIImage, String) -> Void) { self.onPick = onPick }
+
+        init(onPick: @escaping (UIImage, String) -> Void) {
+            self.onPick = onPick
+        }
+
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             let img = (info[.originalImage] as? UIImage) ?? UIImage()
             let title = (info[.imageURL] as? URL)?.deletingPathExtension().lastPathComponent ?? ""
             onPick(img, title)
             picker.dismiss(animated: true)
         }
+
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             picker.dismiss(animated: true)
         }
@@ -328,85 +343,20 @@ struct ContentView: View {
         return docs.appendingPathComponent("dostcare_ios_data.json")
     }
 
+    private var bodyFontSize: CGFloat {
+        accessibleMode ? 15 : 13
+    }
+
+    private var safetyFontSize: CGFloat {
+        accessibleMode ? 13 : 11
+    }
+
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Dost Çare")
-                            .font(.system(size: accessibleMode ? 22 : 18, weight: .bold))
-                            .foregroundColor(.white)
-                        Text("\(patientName)\(patientAge.isEmpty ? "" : " (\(patientAge))")")
-                            .font(.system(size: accessibleMode ? 14 : 12, weight: .medium))
-                            .foregroundColor(Color.white.opacity(0.9))
-                    }
-                    Spacer()
-                    Picker("Lang", selection: $lang) {
-                        Text("TR").tag("TR")
-                        Text("DE").tag("DE")
-                        Text("EN").tag("EN")
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 120)
-                    .onChange(of: lang) { _ in persist() }
-                }
-                .padding()
-                .background(Color(red: 0.06, green: 0.46, blue: 0.43))
-
-                HStack(spacing: 8) {
-                    Button(action: {
-                        voiceMuted.toggle()
-                        persist()
-                        if !voiceMuted { speaker.speak("Ses aktif", lang: lang, muted: false) }
-                    }) {
-                        Text(voiceMuted ? "Ses: KAPALI" : "Ses: AÇIK")
-                            .font(.system(size: accessibleMode ? 14 : 12, weight: .bold))
-                            .padding(.horizontal, 10).padding(.vertical, 7)
-                            .background(voiceMuted ? Color.orange : Color.green)
-                            .foregroundColor(.white).cornerRadius(8)
-                    }
-
-                    Button(action: {
-                        accessibleMode.toggle()
-                        persist()
-                    }) {
-                        Text(accessibleMode ? "Büyük Yazı: AÇIK" : "Büyük Yazı: STD")
-                            .font(.system(size: accessibleMode ? 14 : 12, weight: .bold))
-                            .padding(.horizontal, 10).padding(.vertical, 7)
-                            .background(Color.blue)
-                            .foregroundColor(.white).cornerRadius(8)
-                    }
-
-                    Button(action: { speakSummary() }) {
-                        Text("Gün Özeti")
-                            .font(.system(size: accessibleMode ? 14 : 12, weight: .bold))
-                            .padding(.horizontal, 10).padding(.vertical, 7)
-                            .background(Color.purple)
-                            .foregroundColor(.white).cornerRadius(8)
-                    }
-
-                    Spacer()
-
-                    Button(action: { showProfileSheet = true }) {
-                        Text("Profil")
-                            .font(.system(size: accessibleMode ? 14 : 12, weight: .bold))
-                            .padding(.horizontal, 10).padding(.vertical, 7)
-                            .background(Color.teal)
-                            .foregroundColor(.white).cornerRadius(8)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6))
-
-                Picker("", selection: $selectedTab) {
-                    Text("İlaç & Alarm").tag(0)
-                    Text("Sağlık Kaydı").tag(1)
-                    Text("Refakatçi").tag(2)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.vertical, 6)
+                headerView
+                controlsBar
+                tabPicker
 
                 if selectedTab == 0 {
                     medsTab
@@ -416,12 +366,7 @@ struct ContentView: View {
                     companionTab
                 }
 
-                Text(SafetyNotice.text(for: lang))
-                    .font(.system(size: accessibleMode ? 13 : 11, weight: .bold))
-                    .foregroundColor(.red)
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.red.opacity(0.10))
+                safetyFooter
             }
             .navigationBarHidden(true)
             .onAppear {
@@ -461,6 +406,99 @@ struct ContentView: View {
                 Alert(title: Text("Uyarı"), message: Text(msg.text), dismissButton: .default(Text("Tamam")))
             }
         }
+    }
+
+    private var headerView: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Dost Çare")
+                    .font(.system(size: accessibleMode ? 22 : 18, weight: .bold))
+                    .foregroundColor(.white)
+                Text("\(patientName)\(patientAge.isEmpty ? "" : " (\(patientAge))")")
+                    .font(.system(size: accessibleMode ? 14 : 12, weight: .medium))
+                    .foregroundColor(Color.white.opacity(0.9))
+            }
+            Spacer()
+            Picker("Lang", selection: $lang) {
+                Text("TR").tag("TR")
+                Text("DE").tag("DE")
+                Text("EN").tag("EN")
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 120)
+            .onChange(of: lang) { _ in persist() }
+        }
+        .padding()
+        .background(Color(red: 0.06, green: 0.46, blue: 0.43))
+    }
+
+    private var controlsBar: some View {
+        HStack(spacing: 8) {
+            Button(action: {
+                voiceMuted.toggle()
+                persist()
+                if !voiceMuted { speaker.speak("Ses aktif", lang: lang, muted: false) }
+            }) {
+                Text(voiceMuted ? "Ses: KAPALI" : "Ses: AÇIK")
+                    .font(.system(size: accessibleMode ? 14 : 12, weight: .bold))
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .background(voiceMuted ? Color.orange : Color.green)
+                    .foregroundColor(.white).cornerRadius(8)
+            }
+
+            Button(action: {
+                accessibleMode.toggle()
+                persist()
+            }) {
+                Text(accessibleMode ? "Büyük Yazı: AÇIK" : "Büyük Yazı: STD")
+                    .font(.system(size: accessibleMode ? 14 : 12, weight: .bold))
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .background(Color.blue)
+                    .foregroundColor(.white).cornerRadius(8)
+            }
+
+            Button(action: { speakSummary() }) {
+                Text("Gün Özeti")
+                    .font(.system(size: accessibleMode ? 14 : 12, weight: .bold))
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .background(Color.purple)
+                    .foregroundColor(.white).cornerRadius(8)
+            }
+
+            Spacer()
+
+            Button(action: { showProfileSheet = true }) {
+                Text("Profil")
+                    .font(.system(size: accessibleMode ? 14 : 12, weight: .bold))
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .background(Color.teal)
+                    .foregroundColor(.white).cornerRadius(8)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray6))
+    }
+
+    private var tabPicker: some View {
+        Picker("", selection: $selectedTab) {
+            Text("İlaç & Alarm").tag(0)
+            Text("Sağlık Kaydı").tag(1)
+            Text("Refakatçi").tag(2)
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.vertical, 6)
+    }
+
+    private var safetyFooter: some View {
+        let notice: String = SafetyNotice.text(for: lang)
+        return Text(notice)
+            .font(.system(size: safetyFontSize, weight: .bold))
+            .foregroundColor(.red)
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.red.opacity(0.10))
     }
 
     private var medsTab: some View {
@@ -513,7 +551,7 @@ struct ContentView: View {
                                 .cornerRadius(6)
                         }
                         Text("Saat(ler): \(m.doseTimes) • Günde \(m.dailyCount)x • \(foodLabel(m.foodCode))")
-                            .font(.system(size: accessibleMode ? 15 : 13))
+                            .font(.system(size: bodyFontSize))
                         HStack {
                             Text("Kalan: \(m.days) Gün • \(m.rx)\(m.days <= 3 ? " • REÇETE YENİLE" : "")")
                                 .font(.system(size: accessibleMode ? 14 : 12, weight: m.days <= 3 ? .bold : .regular))
@@ -616,7 +654,7 @@ struct ContentView: View {
             }
 
             List(logs, id: \.self) { row in
-                Text(row).font(.system(size: accessibleMode ? 15 : 13))
+                Text(row).font(.system(size: bodyFontSize))
             }
         }
         .padding()
@@ -656,7 +694,7 @@ struct ContentView: View {
             }
 
             List(compNotes, id: \.self) { row in
-                Text(row).font(.system(size: accessibleMode ? 15 : 13))
+                Text(row).font(.system(size: bodyFontSize))
             }
         }
         .padding()

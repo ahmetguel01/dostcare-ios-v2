@@ -32,6 +32,9 @@ jobs:
               settings:
                 base:
                   PRODUCT_BUNDLE_IDENTIFIER: com.dostcare.ios
+                  GENERATE_INFOPLIST_FILE: "YES"
+                  INFOPLIST_KEY_NSCameraUsageDescription: "İlaç barkodu okutmak ve kutu fotoğrafı çekmek için kamera erişimi gereklidir."
+                  INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "İlaç kutusu veya barkod görseli seçmek için fotoğraf erişimi gereklidir."
                   ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
                   CODE_SIGN_STYLE: Manual
                   DEVELOPMENT_TEAM: ""

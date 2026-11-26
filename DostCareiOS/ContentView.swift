@@ -135,7 +135,6 @@ final class CameraBarcodeController: NSObject, ObservableObject, AVCapturePhotoC
             if self.session.canAddOutput(self.photoOutput) {
                 self.session.addOutput(self.photoOutput)
             }
-            if self.session.canAddOutput(self.metadataOutput) {
                 if self.session.canAddOutput(self.metadataOutput) {
     self.session.addOutput(self.metadataOutput)
 }

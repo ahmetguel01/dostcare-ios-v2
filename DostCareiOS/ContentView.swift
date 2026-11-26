@@ -136,7 +136,9 @@ final class CameraBarcodeController: NSObject, ObservableObject, AVCapturePhotoC
                 self.session.addOutput(self.photoOutput)
             }
             if self.session.canAddOutput(self.metadataOutput) {
-                self.session.addMetadataOutput(self.metadataOutput)
+                if self.session.canAddOutput(self.metadataOutput) {
+    self.session.addOutput(self.metadataOutput)
+}
                 self.metadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
                 self.metadataOutput.metadataObjectTypes = [.ean13, .ean8, .code128, .qr, .dataMatrix]
             }
